@@ -1,166 +1,327 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
+import { supabase, Bug } from '@/lib/supabase';
 
-export default function Dashboard() {
-  const stats = [
-    {
-      title: 'Total Bugs',
-      value: '25',
-      change: '↓ 12% from last week',
-      changeColor: 'text-red-400',
-      icon: '🐛'
-    },
-    {
-      title: 'Open Bugs',
-      value: '12',
-      change: '↓ 8% from last week',
-      changeColor: 'text-red-400',
-      icon: '⭕'
-    },
-    {
-      title: 'In Progress',
-      value: '8',
-      change: '↑ 5% from last week',
-      changeColor: 'text-green-400',
-      icon: '⏳'
-    },
-    {
-      title: 'Closed Bugs',
-      value: '5',
-      change: '↑ 24% from last week',
-      changeColor: 'text-green-400',
-      icon: '✅'
+export default function DashboardPage() {
+  const [bugs, setBugs] = useState<Bug[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBugs();
+  }, []);
+
+  const fetchBugs = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('bugs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching bugs:', error);
+      } else {
+        setBugs(data || []);
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const ChartPlaceholder = ({ title, description }: { title: string; description: string }) => (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
-      <div className="h-64 bg-gray-800 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-700">
-        <div className="text-center">
-          <div className="text-4xl mb-2">📊</div>
-          <p className="text-gray-400 text-sm">{description}</p>
+  const getStats = () => {
+    const total = bugs.length;
+    const critical = bugs.filter(bug => bug.priority === 'Critical').length;
+    const high = bugs.filter(bug => bug.priority === 'High').length;
+    const medium = bugs.filter(bug => bug.priority === 'Medium').length;
+    const low = bugs.filter(bug => bug.priority === 'Low').length;
+    
+    const open = bugs.filter(bug => bug.status === 'Open').length;
+    const inProgress = bugs.filter(bug => bug.status === 'In Progress').length;
+    const testing = bugs.filter(bug => bug.status === 'Testing').length;
+    const resolved = bugs.filter(bug => bug.status === 'Resolved').length;
+    const closed = bugs.filter(bug => bug.status === 'Closed').length;
+    
+    return { 
+      total, 
+      critical, 
+      high, 
+      medium, 
+      low, 
+      open, 
+      inProgress, 
+      testing, 
+      resolved, 
+      closed 
+    };
+  };
+
+  const getRecentBugs = () => {
+    return bugs.slice(0, 5);
+  };
+
+  const getBugsByTags = () => {
+    const tagCounts: { [key: string]: number } = {};
+    
+    bugs.forEach(bug => {
+      if (bug.tags) {
+        bug.tags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      }
+    });
+    
+    return Object.entries(tagCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const stats = getStats();
+  const recentBugs = getRecentBugs();
+  const topTags = getBugsByTags();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Navigation />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-white text-xl">Loading dashboard...</div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black">
       <Navigation />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Dashboard</h1>
-          <p className="text-gray-400">Overview of bug tracking metrics and trends.</p>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-white mb-4">Dashboard</h1>
+          <p className="text-gray-400 text-lg">
+            Analytics and insights for your bug tracking system
+          </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Key Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-400">{stat.title}</h3>
-                <span className="text-2xl">{stat.icon}</span>
+          <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-white">{stats.total}</div>
+                <div className="text-gray-400 text-sm">Total Bugs</div>
               </div>
-              <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
-              <p className={`text-sm ${stat.changeColor}`}>{stat.change}</p>
+              <div className="text-4xl">🐛</div>
             </div>
-          ))}
+          </div>
+          
+          <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-red-400">{stats.critical}</div>
+                <div className="text-gray-400 text-sm">Critical Priority</div>
+              </div>
+              <div className="text-4xl">🚨</div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-blue-400">{stats.open}</div>
+                <div className="text-gray-400 text-sm">Open Issues</div>
+              </div>
+              <div className="text-4xl">📝</div>
+            </div>
+          </div>
+          
+          <div className="bg-gray-900 p-6 rounded-lg border border-gray-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-green-400">{stats.resolved}</div>
+                <div className="text-gray-400 text-sm">Resolved</div>
+              </div>
+              <div className="text-4xl">✅</div>
+            </div>
+          </div>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
-          <ChartPlaceholder 
-            title="Bugs by Status" 
-            description="Chart Placeholder - Pie chart showing distribution of Open, In Progress, and Closed bugs"
-          />
-          <ChartPlaceholder 
-            title="Bugs by Severity" 
-            description="Chart Placeholder - Pie chart showing distribution of Critical, High, Medium, and Low severity bugs"
-          />
-        </div>
-
-        {/* Weekly Trends */}
-        <div className="mb-12">
-          <ChartPlaceholder 
-            title="Bugs Reported This Week" 
-            description="Chart Placeholder - Line chart showing daily bug reports over the past week"
-          />
-        </div>
-
-        {/* Recent Activity */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Recent Bugs */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h3 className="text-lg font-semibold text-white mb-6">Recent Bugs</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {/* Priority Distribution */}
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+            <h2 className="text-xl font-semibold text-white mb-6">Priority Distribution</h2>
             <div className="space-y-4">
               {[
-                { id: 1, title: 'Login Button Not Working', severity: 'Critical', time: '2 hours ago' },
-                { id: 2, title: 'Profile Image Not Loading', severity: 'Medium', time: '4 hours ago' },
-                { id: 3, title: 'Incorrect Total in Cart', severity: 'High', time: '6 hours ago' }
-              ].map((bug) => (
-                <div key={bug.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div>
-                    <p className="text-white font-medium text-sm">{bug.title}</p>
-                    <p className="text-gray-400 text-xs">{bug.time}</p>
+                { label: 'Critical', count: stats.critical, color: 'bg-red-500', total: stats.total },
+                { label: 'High', count: stats.high, color: 'bg-orange-500', total: stats.total },
+                { label: 'Medium', count: stats.medium, color: 'bg-yellow-500', total: stats.total },
+                { label: 'Low', count: stats.low, color: 'bg-green-500', total: stats.total }
+              ].map((priority) => (
+                <div key={priority.label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded ${priority.color}`}></div>
+                    <span className="text-gray-300">{priority.label}</span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    bug.severity === 'Critical' ? 'bg-red-900/30 text-red-300' :
-                    bug.severity === 'High' ? 'bg-orange-900/30 text-orange-300' :
-                    'bg-yellow-900/30 text-yellow-300'
-                  }`}>
-                    {bug.severity}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${priority.color}`}
+                        style={{ 
+                          width: priority.total > 0 ? `${(priority.count / priority.total) * 100}%` : '0%' 
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-white font-medium w-8 text-right">{priority.count}</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Team Performance */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h3 className="text-lg font-semibold text-white mb-6">Team Performance</h3>
+          {/* Status Distribution */}
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+            <h2 className="text-xl font-semibold text-white mb-6">Status Distribution</h2>
             <div className="space-y-4">
               {[
-                { name: 'Alice Johnson', resolved: 8, assigned: 12 },
-                { name: 'Bob Smith', resolved: 6, assigned: 9 },
-                { name: 'Charlie Brown', resolved: 4, assigned: 7 },
-                { name: 'Diana Wilson', resolved: 3, assigned: 5 }
-              ].map((member, index) => (
-                <div key={index} className="p-3 bg-gray-800 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-white font-medium text-sm">{member.name}</span>
-                    <span className="text-gray-400 text-xs">
-                      {member.resolved}/{member.assigned} resolved
-                    </span>
+                { label: 'Open', count: stats.open, color: 'bg-blue-500', total: stats.total },
+                { label: 'In Progress', count: stats.inProgress, color: 'bg-purple-500', total: stats.total },
+                { label: 'Testing', count: stats.testing, color: 'bg-indigo-500', total: stats.total },
+                { label: 'Resolved', count: stats.resolved, color: 'bg-green-500', total: stats.total },
+                { label: 'Closed', count: stats.closed, color: 'bg-gray-500', total: stats.total }
+              ].map((status) => (
+                <div key={status.label} className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded ${status.color}`}></div>
+                    <span className="text-gray-300">{status.label}</span>
                   </div>
-                  <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div 
-                      className="bg-green-500 h-2 rounded-full" 
-                      style={{ width: `${(member.resolved / member.assigned) * 100}%` }}
-                    ></div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-32 bg-gray-700 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${status.color}`}
+                        style={{ 
+                          width: status.total > 0 ? `${(status.count / status.total) * 100}%` : '0%' 
+                        }}
+                      ></div>
+                    </div>
+                    <span className="text-white font-medium w-8 text-right">{status.count}</span>
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Bugs */}
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+            <h2 className="text-xl font-semibold text-white mb-6">Recent Bugs</h2>
+            {recentBugs.length > 0 ? (
+              <div className="space-y-4">
+                {recentBugs.map((bug) => (
+                  <div key={bug.id} className="flex items-start justify-between p-4 bg-gray-800 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          bug.priority === 'Critical' ? 'bg-red-100 text-red-800' :
+                          bug.priority === 'High' ? 'bg-orange-100 text-orange-800' :
+                          bug.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {bug.priority}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          bug.status === 'Open' ? 'bg-blue-100 text-blue-800' :
+                          bug.status === 'In Progress' ? 'bg-purple-100 text-purple-800' :
+                          bug.status === 'Testing' ? 'bg-indigo-100 text-indigo-800' :
+                          bug.status === 'Resolved' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {bug.status}
+                        </span>
+                      </div>
+                      <h3 className="text-white font-medium text-sm mb-1">{bug.title}</h3>
+                      <p className="text-gray-400 text-xs">By {bug.reporter_name}</p>
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      {formatDate(bug.created_at)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">📝</div>
+                <p className="text-gray-400">No bugs reported yet</p>
+              </div>
+            )}
+          </div>
+
+          {/* Top Tags */}
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+            <h2 className="text-xl font-semibold text-white mb-6">Most Common Tags</h2>
+            {topTags.length > 0 ? (
+              <div className="space-y-4">
+                {topTags.map(([tag, count], index) => (
+                  <div key={tag} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs text-white font-bold">
+                        {index + 1}
+                      </div>
+                      <span className="text-gray-300">{tag}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="w-24 bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="h-2 rounded-full bg-blue-500"
+                          style={{ 
+                            width: topTags.length > 0 ? `${(count / topTags[0][1]) * 100}%` : '0%' 
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-white font-medium w-6 text-right">{count}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-2">🏷️</div>
+                <p className="text-gray-400">No tags found</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="mt-12 bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div className="flex flex-wrap gap-4">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
-              📊 Generate Report
-            </button>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
-              📧 Send Weekly Summary
-            </button>
-            <button className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors">
-              🔄 Sync with External Tools
-            </button>
-            <button className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors">
-              ⚙️ Configure Alerts
-            </button>
+        <div className="mt-12 text-center">
+          <div className="bg-gray-900 rounded-lg border border-gray-800 p-8">
+            <h2 className="text-2xl font-semibold text-white mb-4">Quick Actions</h2>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="/log-bug"
+                className="bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Log New Bug
+              </a>
+              <a
+                href="/bugs"
+                className="border border-gray-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors"
+              >
+                View All Bugs
+              </a>
+            </div>
           </div>
         </div>
       </main>

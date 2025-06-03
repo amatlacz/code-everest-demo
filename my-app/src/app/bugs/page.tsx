@@ -1,214 +1,264 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
+import { supabase, Bug } from '@/lib/supabase';
 
-interface Bug {
-  id: number;
-  title: string;
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'Open' | 'In Progress' | 'Closed';
-  tags: string[];
-  assignee: string;
-}
-
-const sampleBugs: Bug[] = [
-  {
-    id: 1,
-    title: 'Login Button Not Working',
-    severity: 'Critical',
-    status: 'Open',
-    tags: ['UI', 'Authentication'],
-    assignee: 'Alice Johnson'
-  },
-  {
-    id: 2,
-    title: 'Profile Image Not Loading',
-    severity: 'Medium',
-    status: 'In Progress',
-    tags: ['UI', 'Assets'],
-    assignee: 'Bob Smith'
-  },
-  {
-    id: 3,
-    title: 'Incorrect Total in Cart',
-    severity: 'High',
-    status: 'Open',
-    tags: ['Calculation', 'Payment'],
-    assignee: 'Charlie Brown'
-  },
-  {
-    id: 4,
-    title: 'Password Reset Email Not Sending',
-    severity: 'Critical',
-    status: 'In Progress',
-    tags: ['Email', 'Authentication'],
-    assignee: 'Diana Wilson'
-  },
-  {
-    id: 5,
-    title: 'Search Results Pagination Error',
-    severity: 'Low',
-    status: 'Closed',
-    tags: ['UI', 'Search'],
-    assignee: 'Alice Johnson'
-  }
-];
-
-export default function Bugs() {
-  const [bugs, setBugs] = useState<Bug[]>(sampleBugs);
+export default function BugsPage() {
+  const [bugs, setBugs] = useState<Bug[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState<'severity' | 'status' | 'title'>('severity');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [priorityFilter, setPriorityFilter] = useState('All');
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'Critical': return 'text-red-400';
-      case 'High': return 'text-orange-400';
-      case 'Medium': return 'text-yellow-400';
-      case 'Low': return 'text-blue-400';
-      default: return 'text-gray-400';
+  useEffect(() => {
+    fetchBugs();
+  }, []);
+
+  const fetchBugs = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('bugs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching bugs:', error);
+      } else {
+        setBugs(data || []);
+      }
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'Critical': return 'bg-red-100 text-red-800';
+      case 'High': return 'bg-orange-100 text-orange-800';
+      case 'Medium': return 'bg-yellow-100 text-yellow-800';
+      case 'Low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Open': return 'text-red-400';
-      case 'In Progress': return 'text-yellow-400';
-      case 'Closed': return 'text-green-400';
-      default: return 'text-gray-400';
+      case 'Open': return 'bg-blue-100 text-blue-800';
+      case 'In Progress': return 'bg-purple-100 text-purple-800';
+      case 'Testing': return 'bg-indigo-100 text-indigo-800';
+      case 'Resolved': return 'bg-green-100 text-green-800';
+      case 'Closed': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const sortBugs = (criteria: 'severity' | 'status' | 'title') => {
-    const severityOrder = { 'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1 };
-    const statusOrder = { 'Open': 3, 'In Progress': 2, 'Closed': 1 };
+  const filteredBugs = bugs.filter(bug => {
+    const matchesSearch = bug.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (bug.description && bug.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = statusFilter === 'All' || bug.status === statusFilter;
+    const matchesPriority = priorityFilter === 'All' || bug.priority === priorityFilter;
+    
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
-    const sorted = [...bugs].sort((a, b) => {
-      if (criteria === 'severity') {
-        return severityOrder[b.severity] - severityOrder[a.severity];
-      } else if (criteria === 'status') {
-        return statusOrder[b.status] - statusOrder[a.status];
-      } else {
-        return a.title.localeCompare(b.title);
-      }
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
-
-    setBugs(sorted);
-    setSortBy(criteria);
   };
 
-  const filteredBugs = bugs.filter(bug =>
-    bug.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bug.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const getStats = () => {
+    const total = bugs.length;
+    const critical = bugs.filter(bug => bug.priority === 'Critical').length;
+    const high = bugs.filter(bug => bug.priority === 'High').length;
+    const medium = bugs.filter(bug => bug.priority === 'Medium').length;
+    const low = bugs.filter(bug => bug.priority === 'Low').length;
+    const open = bugs.filter(bug => bug.status === 'Open').length;
+    
+    return { total, critical, high, medium, low, open };
+  };
+
+  const stats = getStats();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black">
+        <Navigation />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-white text-xl">Loading bugs...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black">
       <Navigation />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">All Bugs</h1>
-          <p className="text-gray-400">View and manage all reported bugs.</p>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-white mb-4">Bug Tracker</h1>
+          <p className="text-gray-400 text-lg">
+            Monitor and manage project defects
+          </p>
         </div>
 
-        {/* Search and Sort Controls */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Search bugs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+            <div className="text-2xl font-bold text-white">{stats.total}</div>
+            <div className="text-gray-400 text-sm">Total</div>
           </div>
-          
-          <button
-            onClick={() => sortBugs('severity')}
-            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-              sortBy === 'severity' 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            🔽 Sort by Severity
-          </button>
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+            <div className="text-2xl font-bold text-red-400">{stats.critical}</div>
+            <div className="text-gray-400 text-sm">Critical</div>
+          </div>
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+            <div className="text-2xl font-bold text-orange-400">{stats.high}</div>
+            <div className="text-gray-400 text-sm">High</div>
+          </div>
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+            <div className="text-2xl font-bold text-yellow-400">{stats.medium}</div>
+            <div className="text-gray-400 text-sm">Medium</div>
+          </div>
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+            <div className="text-2xl font-bold text-green-400">{stats.low}</div>
+            <div className="text-gray-400 text-sm">Low</div>
+          </div>
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-800">
+            <div className="text-2xl font-bold text-blue-400">{stats.open}</div>
+            <div className="text-gray-400 text-sm">Open</div>
+          </div>
         </div>
 
-        {/* Bugs Table */}
-        {filteredBugs.length === 0 ? (
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center">
-            <div className="text-4xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-white mb-2">No bugs found</h3>
-            <p className="text-gray-400">Try adjusting your search criteria or log a new bug.</p>
-          </div>
-        ) : (
-          <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-800">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">
-                      Title
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">
-                      Severity
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">
-                      Tags
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-800">
-                  {filteredBugs.map((bug) => (
-                    <tr 
-                      key={bug.id} 
-                      className="hover:bg-gray-800 transition-colors cursor-pointer"
-                    >
-                      <td className="px-6 py-4">
-                        <Link href={`/bugs/${bug.id}`} className="block">
-                          <div className="text-white font-medium hover:text-blue-400 transition-colors">
-                            {bug.title}
-                          </div>
-                          <div className="text-sm text-gray-400 mt-1">
-                            Assigned to {bug.assignee}
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`font-medium ${getSeverityColor(bug.severity)}`}>
-                          {bug.severity}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`font-medium ${getStatusColor(bug.status)}`}>
-                          {bug.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {bug.tags.map((tag, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-blue-900/30 text-blue-300 text-xs rounded-full border border-blue-800"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Search and Filters */}
+        <div className="bg-gray-900 rounded-lg border border-gray-800 p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Search</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search bugs..."
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-white focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-white focus:border-transparent"
+              >
+                <option value="All">All Status</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Testing">Testing</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Priority</label>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-white focus:border-transparent"
+              >
+                <option value="All">All Priority</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Bugs List */}
+        <div className="bg-gray-900 rounded-lg border border-gray-800">
+          <div className="px-6 py-4 border-b border-gray-800">
+            <h2 className="text-lg font-semibold text-white">
+              Bugs ({filteredBugs.length})
+            </h2>
+          </div>
+          
+          {filteredBugs.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="text-6xl mb-4">🐛</div>
+              <h3 className="text-xl font-semibold text-white mb-2">No bugs found</h3>
+              <p className="text-gray-400 mb-6">
+                {bugs.length === 0 
+                  ? "No bugs have been reported yet." 
+                  : "Try adjusting your search or filter criteria."
+                }
+              </p>
+              <a
+                href="/log-bug"
+                className="inline-block bg-white text-black px-6 py-2 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Log First Bug
+              </a>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-800">
+              {filteredBugs.map((bug) => (
+                <div key={bug.id} className="p-6 hover:bg-gray-800/50 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(bug.priority)}`}>
+                        {bug.priority}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(bug.status)}`}>
+                        {bug.status}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {formatDate(bug.created_at)}
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    {bug.title}
+                  </h3>
+                  
+                  {bug.description && (
+                    <p className="text-gray-300 mb-3 text-sm">
+                      {bug.description}
+                    </p>
+                  )}
+                  
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+                    <div>Reporter: {bug.reporter_name}</div>
+                    {bug.assignee_name && (
+                      <div>Assignee: {bug.assignee_name}</div>
+                    )}
+                    {bug.tags && bug.tags.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <span>Tags:</span>
+                        {bug.tags.map((tag, index) => (
+                          <span 
+                            key={index}
+                            className="bg-gray-700 px-2 py-0.5 rounded text-xs"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
