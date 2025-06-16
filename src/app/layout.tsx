@@ -1,0 +1,9 @@
+// ...existing imports and code...
+const metadata = {
+    title: "AI in Coding - Workshop",
+    description: "AI in Coding: Let AI Be Your Sherpa - Workshop Demo"
+};
+// ...existing code...
+function RootLayout({ children }) {
+    // ...existing code...
+}

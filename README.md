@@ -1,12 +1,12 @@
-# Code Everest Bug Tracker 🏔️
+# AI in Coding Bug Tracker 🧠
 
-Welcome to the **Code Everest Bug Tracker**, a community-driven, open-source bug tracking system designed to help developers conquer software challenges with ease! Whether you're a solo coder or part of a team, this tool empowers you to log, track, and resolve bugs efficiently, all while leveraging the power of AI to enhance your workflow. Born from the "Conquering Code Everest: Let AI Be Your Sherpa" workshop at EuroSTAR 2025, this project is now a living, breathing effort fueled by contributors worldwide.
+Welcome to the **AI in Coding Bug Tracker**, a community-driven, open-source bug tracking system designed to help developers conquer software challenges with ease! Whether you're a solo coder or part of a team, this tool empowers you to log, track, and resolve bugs efficiently, all while leveraging the power of AI to enhance your workflow. Born from the "AI in Coding: Let AI Be Your Sherpa" workshop, this project is now a living, breathing effort fueled by contributors worldwide.
 
 > **Note**: This system is under active development! New features are being added by the community on a daily basis. Join us to summit bugs together! 🚀
 
 ## 📋 Project Description
 
-The Code Everest Bug Tracker is a modern web application built to streamline the bug management process. Imagine a tool that not only lets you log and track issues but also harnesses AI to provide intelligent insights—like spotting duplicate bugs, suggesting fixes, or summarizing complex issues in a snap. With a clean, responsive interface and seamless database integration, this tracker is designed to help you navigate the rocky terrain of software development. We use Supabase for robust data management and integrate with LLMs (like Perplexity or ChatGPT) for AI-driven features, all powered by a cutting-edge tech stack. Our community is constantly evolving the system, and we’d love for you to contribute to the ascent!
+The AI in Coding Bug Tracker is a modern web application built to streamline the bug management process. Imagine a tool that not only lets you log and track issues but also harnesses AI to provide intelligent insights—like spotting duplicate bugs, suggesting fixes, or summarizing complex issues in a snap. With a clean, responsive interface and seamless database integration, this tracker is designed to help you navigate the rocky terrain of software development. We use Supabase for robust data management and integrate with LLMs (like Perplexity or ChatGPT) for AI-driven features, all powered by a cutting-edge tech stack. Our community is constantly evolving the system, and we’d love for you to contribute to the ascent!
 
 ## 🛠️ Technologies Used
 
@@ -22,7 +22,7 @@ This project is built with the following technologies:
 
 ## 🌟 Planned Features
 
-The Code Everest Bug Tracker is designed to be a powerful ally in your development journey. Here’s a look at the features we’re planning to bring to life, blending core bug tracking capabilities with AI-driven enhancements. As a new contributor, we suggest picking *one foundational feature* (like logging or listing bugs) to get started, and *one feature that excites you* (like AI-powered suggestions) to add to the MVP. Once you’ve summited those peaks, feel free to explore the remaining features at your own pace and contribute to the project’s growth!
+The AI in Coding Bug Tracker is designed to be a powerful ally in your development journey. Here’s a look at the features we’re planning to bring to life, blending core bug tracking capabilities with AI-driven enhancements. As a new contributor, we suggest picking *one foundational feature* (like logging or listing bugs) to get started, and *one feature that excites you* (like AI-powered suggestions) to add to the MVP. Once you’ve summited those peaks, feel free to explore the remaining features at your own pace and contribute to the project’s growth!
 
 - **Log Bugs with Ease**: Submit new bugs with a title, detailed description, and severity level (Low, Medium, High, or Critical). This ensures every issue is captured with the right context, making it easier to tackle problems systematically. We store this data in a Supabase table (`bugs`), with fields for `title`, `description`, `severity`, and `created_at`, accessible via a simple form in the Next.js app. It’s the cornerstone of any bug tracker, inspired by tools like ClickUp, ensuring you have all the details you need to start debugging.
 
@@ -46,7 +46,7 @@ The Code Everest Bug Tracker is designed to be a powerful ally in your developme
 
 ## 🤝 Contributing
 
-We welcome contributions from the community! Whether you're adding new features, fixing bugs, or improving documentation, your efforts help us summit Code Everest together. To get started:
+We welcome contributions from the community! Whether you're adding new features, fixing bugs, or improving documentation, your efforts help us summit the AI in Coding workshop together. To get started:
 
 1. Fork the repository.
 2. Clone your fork: `git clone https://github.com/amatlacz/code-everest-demo.git`
@@ -69,4 +69,4 @@ Have questions or ideas? Reach out to the community via GitHub Issues, or contac
 
 ---
 
-*Let’s summit those bugs together! 🏔️*
+*Let’s summit those bugs together! 🧠*
